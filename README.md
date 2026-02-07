@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/welcome.png" alt="Raccoon Recon Screenshot" width="800">
+  <img src="docs/dashboard.png" alt="Raccoon Recon Dashboard" width="800">
 </p>
 
 ---
