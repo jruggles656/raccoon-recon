@@ -64,10 +64,11 @@ func (e *Executor) CancelScan(scanID int64) {
 }
 
 var builtinTools = map[string]bool{
-	"google_dorking":  true,
+	"google_dorking":   true,
 	"osint_aggregator": true,
-	"ssl_check":       true,
-	"robots_sitemap":  true,
+	"ssl_check":        true,
+	"robots_sitemap":   true,
+	"metadata_extract": true,
 }
 
 func (e *Executor) runScan(ctx context.Context, scan *database.Scan) {
@@ -180,6 +181,8 @@ func (e *Executor) buildToolSpec(scan *database.Scan) (tools.ToolSpec, error) {
 		return tools.ToolSpec{Name: "SSL/TLS Check", BinaryName: "__builtin__"}, nil
 	case "robots_sitemap":
 		return tools.ToolSpec{Name: "Robots/Sitemap", BinaryName: "__builtin__"}, nil
+	case "metadata_extract":
+		return tools.ToolSpec{Name: "Metadata Extractor", BinaryName: "__builtin__"}, nil
 	default:
 		return tools.ToolSpec{}, fmt.Errorf("unknown tool: %s", scan.Tool)
 	}

@@ -92,6 +92,16 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	s.hub.Subscribe(msg.ScanID, conn)
 	defer s.hub.Unsubscribe(msg.ScanID, conn)
 
+	// Check if scan already completed before we subscribed (race condition fix)
+	scan, err := s.db.GetScan(msg.ScanID)
+	if err == nil && scan != nil && (scan.Status == "completed" || scan.Status == "failed") {
+		done := tools.OutputLine{Done: true}
+		if doneData, err := json.Marshal(done); err == nil {
+			conn.Write(r.Context(), websocket.MessageText, doneData)
+		}
+		return
+	}
+
 	// Keep connection alive — wait for close or context cancellation
 	for {
 		_, _, err := conn.Read(r.Context())

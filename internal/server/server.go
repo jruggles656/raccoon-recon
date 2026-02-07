@@ -97,6 +97,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/reports", s.handleAPIReports)
 	s.mux.HandleFunc("/api/reports/", s.handleAPIReport)
 	s.mux.HandleFunc("/api/tools/status", s.handleAPIToolStatus)
+	s.mux.HandleFunc("/api/upload/metadata", s.handleAPIFileMetadata)
 
 	// WebSocket
 	s.mux.HandleFunc("/ws", s.handleWebSocket)

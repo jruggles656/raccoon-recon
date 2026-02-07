@@ -1,4 +1,4 @@
-// ReconSuite frontend
+// Raccoon Recon frontend
 
 // --- Modal helpers ---
 function showNewProjectModal() {
@@ -152,6 +152,15 @@ async function runScan(e, scanType) {
 
     const scan = await resp.json();
 
+    let finished = false;
+    const markDone = (status) => {
+        if (finished) return;
+        finished = true;
+        statusBadge.textContent = status === 'completed' ? 'Completed' : 'Failed';
+        statusBadge.className = status === 'completed' ? 'badge badge-completed' : 'badge badge-failed';
+        loadScanResults(scan.id);
+    };
+
     // Connect WebSocket for live output
     const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${wsProto}//${location.host}/ws`);
@@ -163,21 +172,21 @@ async function runScan(e, scanType) {
     ws.onmessage = (evt) => {
         const msg = JSON.parse(evt.data);
         if (msg.done) {
-            statusBadge.textContent = 'Completed';
-            statusBadge.className = 'badge badge-completed';
             ws.close();
-            loadScanResults(scan.id);
+            markDone('completed');
             return;
         }
-        const cls = msg.stream === 'stderr' ? 'line-stderr' : 'line-stdout';
-        terminal.innerHTML += `<span class="${cls}">${esc(msg.line)}</span>\n`;
-        terminal.scrollTop = terminal.scrollHeight;
+        if (!finished) {
+            const cls = msg.stream === 'stderr' ? 'line-stderr' : 'line-stdout';
+            terminal.innerHTML += `<span class="${cls}">${esc(msg.line)}</span>\n`;
+            terminal.scrollTop = terminal.scrollHeight;
+        }
     };
 
-    ws.onerror = () => {
-        statusBadge.textContent = 'Error';
-        statusBadge.className = 'badge badge-failed';
-    };
+    ws.onerror = () => { /* polling handles it */ };
+
+    // Poll as reliable fallback
+    pollScanStatus(scan.id, statusBadge, terminal, () => finished, (s) => { markDone(s); try { ws.close(); } catch(e) {} });
 }
 
 async function loadScanResults(scanId) {
@@ -211,8 +220,250 @@ function badgeClass(type) {
         port: 'running', dns: 'completed', whois: 'completed',
         header: 'pending', ssl: 'completed', os: 'running',
         google_dork: 'pending', osint_link: 'pending', raw: 'pending',
+        metadata: 'completed',
     };
     return map[type] || 'pending';
+}
+
+// --- Dashboard Quick Scan ---
+function quickScan(tool, inputId, scanType) {
+    const input = document.getElementById(inputId);
+    const target = input.value.trim();
+    if (!target) {
+        input.focus();
+        return;
+    }
+
+    const modal = document.getElementById('qa-modal');
+    const terminal = document.getElementById('qa-terminal');
+    const statusBadge = document.getElementById('qa-scan-status');
+    const resultsDiv = document.getElementById('qa-results');
+    const resultsBody = document.getElementById('qa-results-body');
+    const title = document.getElementById('qa-modal-title');
+
+    modal.classList.remove('hidden');
+    terminal.innerHTML = '';
+    statusBadge.textContent = 'Running';
+    statusBadge.className = 'badge badge-running';
+    resultsDiv.style.display = 'none';
+    resultsBody.innerHTML = '';
+    title.textContent = tool.replace(/_/g, ' ').toUpperCase() + ' \u2014 ' + target;
+
+    const body = {
+        target: target,
+        tool: tool,
+        scan_type: scanType,
+        project_id: 0,
+        parameters: '{}',
+    };
+
+    fetch('/api/scans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }).then(resp => {
+        if (!resp.ok) {
+            return resp.json().then(err => {
+                terminal.innerHTML = `<span class="line-stderr">Error: ${esc(err.error || 'Unknown error')}</span>\n`;
+                statusBadge.textContent = 'Failed';
+                statusBadge.className = 'badge badge-failed';
+                throw new Error('scan failed');
+            });
+        }
+        return resp.json();
+    }).then(scan => {
+        // Always poll as primary mechanism; WS enhances with live output
+        let finished = false;
+        const markDone = (status) => {
+            if (finished) return;
+            finished = true;
+            statusBadge.textContent = status === 'completed' ? 'Completed' : 'Failed';
+            statusBadge.className = status === 'completed' ? 'badge badge-completed' : 'badge badge-failed';
+            loadQAResults(scan.id);
+            if (typeof initDashboard === 'function') initDashboard();
+        };
+
+        // Try WebSocket for live streaming
+        const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const ws = new WebSocket(`${wsProto}//${location.host}/ws`);
+
+        ws.onopen = () => {
+            ws.send(JSON.stringify({ scan_id: scan.id }));
+        };
+
+        ws.onmessage = (evt) => {
+            const msg = JSON.parse(evt.data);
+            if (msg.done) {
+                ws.close();
+                markDone('completed');
+                return;
+            }
+            if (!finished) {
+                const cls = msg.stream === 'stderr' ? 'line-stderr' : 'line-stdout';
+                terminal.innerHTML += `<span class="${cls}">${esc(msg.line)}</span>\n`;
+                terminal.scrollTop = terminal.scrollHeight;
+            }
+        };
+
+        ws.onerror = () => { /* polling handles it */ };
+
+        // Poll scan status as reliable fallback
+        pollScanStatus(scan.id, statusBadge, terminal, () => finished, (s) => { markDone(s); try { ws.close(); } catch(e) {} });
+    }).catch(() => {});
+}
+
+async function pollScanStatus(scanId, statusBadge, terminal, isFinished, onDone) {
+    for (let i = 0; i < 60; i++) {
+        await new Promise(r => setTimeout(r, 500));
+        if (isFinished && isFinished()) return;
+        try {
+            const resp = await fetch(`/api/scans/${scanId}`);
+            if (!resp.ok) continue;
+            const scan = await resp.json();
+            if (scan.status === 'completed' || scan.status === 'failed') {
+                if (scan.raw_output && terminal.innerHTML.trim() === '') {
+                    terminal.innerHTML = scan.raw_output.split('\n').map(l =>
+                        `<span class="line-stdout">${esc(l)}</span>\n`
+                    ).join('');
+                }
+                if (onDone) { onDone(scan.status); }
+                else {
+                    statusBadge.textContent = scan.status === 'completed' ? 'Completed' : 'Failed';
+                    statusBadge.className = scan.status === 'completed' ? 'badge badge-completed' : 'badge badge-failed';
+                    loadQAResults(scanId);
+                    if (typeof initDashboard === 'function') initDashboard();
+                }
+                return;
+            }
+        } catch (e) { /* continue polling */ }
+    }
+    if (isFinished && isFinished()) return;
+    statusBadge.textContent = 'Timeout';
+    statusBadge.className = 'badge badge-failed';
+}
+
+async function loadQAResults(scanId) {
+    const resp = await fetch(`/api/scans/${scanId}/results`);
+    if (!resp.ok) return;
+
+    const results = await resp.json();
+    if (!results || results.length === 0) return;
+
+    const resultsDiv = document.getElementById('qa-results');
+    const tbody = document.getElementById('qa-results-body');
+    resultsDiv.style.display = 'block';
+
+    tbody.innerHTML = results.map(r => {
+        let displayValue = r.value;
+        if (displayValue.startsWith('http://') || displayValue.startsWith('https://')) {
+            displayValue = `<a href="${esc(r.value)}" target="_blank" rel="noopener" style="color: var(--accent);">${esc(r.value)}</a>`;
+        } else {
+            displayValue = esc(displayValue);
+        }
+        return `<tr>
+            <td><span class="badge badge-${badgeClass(r.result_type)}">${esc(r.result_type)}</span></td>
+            <td style="font-family: var(--font-mono);">${esc(r.key)}</td>
+            <td>${displayValue}</td>
+        </tr>`;
+    }).join('');
+}
+
+function closeQAModal() {
+    document.getElementById('qa-modal').classList.add('hidden');
+    const preview = document.getElementById('qa-image-preview');
+    if (preview) {
+        preview.style.display = 'none';
+        preview.src = '';
+    }
+}
+
+// --- File Metadata Upload ---
+async function uploadFileMetadata(file) {
+    if (!file) return;
+
+    const modal = document.getElementById('qa-modal');
+    const terminal = document.getElementById('qa-terminal');
+    const statusBadge = document.getElementById('qa-scan-status');
+    const resultsDiv = document.getElementById('qa-results');
+    const resultsBody = document.getElementById('qa-results-body');
+    const title = document.getElementById('qa-modal-title');
+    const preview = document.getElementById('qa-image-preview');
+
+    modal.classList.remove('hidden');
+    terminal.innerHTML = `<span class="line-stdout">Uploading ${esc(file.name)} (${formatSize(file.size)})...</span>\n`;
+    statusBadge.textContent = 'Extracting';
+    statusBadge.className = 'badge badge-running';
+    resultsDiv.style.display = 'none';
+    resultsBody.innerHTML = '';
+    title.textContent = 'FILE METADATA \u2014 ' + file.name;
+
+    // Show image preview for image files
+    if (preview) {
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.style.display = 'none';
+            preview.src = '';
+        }
+    }
+
+    // Upload file
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const resp = await fetch('/api/upload/metadata', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json();
+            terminal.innerHTML += `<span class="line-stderr">Error: ${esc(err.error || 'Upload failed')}</span>\n`;
+            statusBadge.textContent = 'Failed';
+            statusBadge.className = 'badge badge-failed';
+            return;
+        }
+
+        const data = await resp.json();
+        terminal.innerHTML += `<span class="line-stdout">Extracted ${data.results.length} metadata fields</span>\n`;
+        terminal.innerHTML += `<span class="line-stdout">MIME type: ${esc(data.mime_type)}</span>\n`;
+        statusBadge.textContent = 'Completed';
+        statusBadge.className = 'badge badge-completed';
+
+        // Display results
+        if (data.results && data.results.length > 0) {
+            resultsDiv.style.display = 'block';
+            resultsBody.innerHTML = data.results.map(r => {
+                let displayValue = esc(r.value);
+                // Make GPS coordinates a link to map
+                if (r.key === 'gps_coordinates') {
+                    const coords = r.value;
+                    displayValue = `<a href="https://www.google.com/maps?q=${encodeURIComponent(coords)}" target="_blank" rel="noopener" style="color: var(--accent);">${esc(coords)}</a>`;
+                }
+                return `<tr>
+                    <td><span class="badge badge-completed">metadata</span></td>
+                    <td style="font-family: var(--font-mono);">${esc(r.key)}</td>
+                    <td>${displayValue}</td>
+                </tr>`;
+            }).join('');
+        }
+    } catch (e) {
+        terminal.innerHTML += `<span class="line-stderr">Error: ${esc(e.message)}</span>\n`;
+        statusBadge.textContent = 'Failed';
+        statusBadge.className = 'badge badge-failed';
+    }
+}
+
+function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' bytes';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
 // --- Dashboard ---

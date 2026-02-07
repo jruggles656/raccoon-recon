@@ -74,9 +74,13 @@ func (db *DB) DeleteProject(id int64) error {
 // --- Scans ---
 
 func (db *DB) CreateScan(s *Scan) error {
+	var projectID interface{} = s.ProjectID
+	if s.ProjectID == 0 {
+		projectID = nil
+	}
 	res, err := db.Exec(
 		`INSERT INTO scans (project_id, scan_type, tool, target, parameters, status) VALUES (?, ?, ?, ?, ?, ?)`,
-		s.ProjectID, s.ScanType, s.Tool, s.Target, s.Parameters, s.Status,
+		projectID, s.ScanType, s.Tool, s.Target, s.Parameters, s.Status,
 	)
 	if err != nil {
 		return fmt.Errorf("insert scan: %w", err)
@@ -87,15 +91,19 @@ func (db *DB) CreateScan(s *Scan) error {
 
 func (db *DB) GetScan(id int64) (*Scan, error) {
 	s := &Scan{}
+	var projectID sql.NullInt64
 	err := db.QueryRow(
 		`SELECT id, project_id, scan_type, tool, target, parameters, status, raw_output, started_at, completed_at, created_at
 		 FROM scans WHERE id = ?`, id,
-	).Scan(&s.ID, &s.ProjectID, &s.ScanType, &s.Tool, &s.Target, &s.Parameters, &s.Status, &s.RawOutput, &s.StartedAt, &s.CompletedAt, &s.CreatedAt)
+	).Scan(&s.ID, &projectID, &s.ScanType, &s.Tool, &s.Target, &s.Parameters, &s.Status, &s.RawOutput, &s.StartedAt, &s.CompletedAt, &s.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("get scan: %w", err)
+	}
+	if projectID.Valid {
+		s.ProjectID = projectID.Int64
 	}
 	return s, nil
 }
@@ -113,8 +121,12 @@ func (db *DB) ListScansByProject(projectID int64) ([]Scan, error) {
 	var scans []Scan
 	for rows.Next() {
 		var s Scan
-		if err := rows.Scan(&s.ID, &s.ProjectID, &s.ScanType, &s.Tool, &s.Target, &s.Parameters, &s.Status, &s.RawOutput, &s.StartedAt, &s.CompletedAt, &s.CreatedAt); err != nil {
+		var projectID sql.NullInt64
+		if err := rows.Scan(&s.ID, &projectID, &s.ScanType, &s.Tool, &s.Target, &s.Parameters, &s.Status, &s.RawOutput, &s.StartedAt, &s.CompletedAt, &s.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan row: %w", err)
+		}
+		if projectID.Valid {
+			s.ProjectID = projectID.Int64
 		}
 		scans = append(scans, s)
 	}
@@ -297,8 +309,12 @@ func (db *DB) ListRecentScans(limit int) ([]Scan, error) {
 	var scans []Scan
 	for rows.Next() {
 		var s Scan
-		if err := rows.Scan(&s.ID, &s.ProjectID, &s.ScanType, &s.Tool, &s.Target, &s.Parameters, &s.Status, &s.RawOutput, &s.StartedAt, &s.CompletedAt, &s.CreatedAt); err != nil {
+		var projectID sql.NullInt64
+		if err := rows.Scan(&s.ID, &projectID, &s.ScanType, &s.Tool, &s.Target, &s.Parameters, &s.Status, &s.RawOutput, &s.StartedAt, &s.CompletedAt, &s.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan row: %w", err)
+		}
+		if projectID.Valid {
+			s.ProjectID = projectID.Int64
 		}
 		scans = append(scans, s)
 	}

@@ -3,6 +3,13 @@
 <div class="page-header">
     <h2>Dashboard</h2>
 </div>
+
+<div class="dashboard-banner"> ____                                  ____
+|  _ \ __ _  ___ ___ ___   ___  _ __ |  _ \ ___  ___ ___  _ __
+| |_) / _` |/ __/ __/ _ \ / _ \| '_ \| |_) / _ \/ __/ _ \| '_ \
+|  _ &lt; (_| | (_| (_| (_) | (_) | | | |  _ &lt;  __/ (_| (_) | | | |
+|_| \_\__,_|\___\___\___/ \___/|_| |_|_| \_\___|\___\___/|_| |_|</div>
+
 <div class="card-grid">
     <div class="card">
         <h3>Projects</h3>
@@ -16,6 +23,97 @@
     <div class="card">
         <h3>Findings</h3>
         <p class="stat" id="stat-findings">0</p>
+    </div>
+</div>
+
+<div class="scan-line"></div>
+
+<p class="section-header">Quick Actions</p>
+<div class="quick-actions-grid">
+    <div class="quick-action-card">
+        <h4>WHOIS Lookup</h4>
+        <p class="qa-desc">Query domain registration info</p>
+        <div class="qa-form">
+            <input type="text" id="qa-whois-target" placeholder="example.com">
+            <button onclick="quickScan('whois', 'qa-whois-target', 'passive')">Run</button>
+        </div>
+    </div>
+
+    <div class="quick-action-card">
+        <h4>DNS Records</h4>
+        <p class="qa-desc">Fetch DNS records via dig</p>
+        <div class="qa-form">
+            <input type="text" id="qa-dig-target" placeholder="example.com">
+            <button onclick="quickScan('dig', 'qa-dig-target', 'passive')">Run</button>
+        </div>
+    </div>
+
+    <div class="quick-action-card">
+        <h4>Port Scan</h4>
+        <p class="qa-desc">Quick TCP scan via nmap</p>
+        <div class="qa-form">
+            <input type="text" id="qa-nmap-target" placeholder="192.168.1.1">
+            <button onclick="quickScan('nmap', 'qa-nmap-target', 'active')">Run</button>
+        </div>
+    </div>
+
+    <div class="quick-action-card">
+        <h4>SSL/TLS Check</h4>
+        <p class="qa-desc">Analyze certificate and TLS config</p>
+        <div class="qa-form">
+            <input type="text" id="qa-ssl-target" placeholder="example.com">
+            <button onclick="quickScan('ssl_check', 'qa-ssl-target', 'web')">Run</button>
+        </div>
+    </div>
+
+    <div class="quick-action-card">
+        <h4>Metadata Extractor</h4>
+        <p class="qa-desc">Extract HTTP headers, meta tags, OG data</p>
+        <div class="qa-form">
+            <input type="text" id="qa-meta-target" placeholder="https://example.com">
+            <button onclick="quickScan('metadata_extract', 'qa-meta-target', 'web')">Run</button>
+        </div>
+    </div>
+
+    <div class="quick-action-card">
+        <h4>Google Dorking</h4>
+        <p class="qa-desc">Generate targeted search queries</p>
+        <div class="qa-form">
+            <input type="text" id="qa-dork-target" placeholder="example.com">
+            <button onclick="quickScan('google_dorking', 'qa-dork-target', 'passive')">Run</button>
+        </div>
+    </div>
+
+    <div class="quick-action-card">
+        <h4>File Metadata</h4>
+        <p class="qa-desc">Extract EXIF, PDF info, and hidden data from files</p>
+        <div class="file-drop-zone" id="file-drop-zone"
+             onclick="document.getElementById('file-input').click()"
+             ondragover="event.preventDefault(); this.classList.add('dragover')"
+             ondragleave="this.classList.remove('dragover')"
+             ondrop="event.preventDefault(); this.classList.remove('dragover'); uploadFileMetadata(event.dataTransfer.files[0])">
+            <span class="drop-label">Drop image or PDF here, or click to browse</span>
+        </div>
+        <input type="file" id="file-input" accept="image/*,.pdf" style="display:none"
+               onchange="if(this.files[0]) uploadFileMetadata(this.files[0]); this.value='';">
+    </div>
+</div>
+
+<div id="qa-modal" class="qa-output-modal hidden">
+    <div class="qa-output-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3 id="qa-modal-title" style="font-size:14px; font-family:var(--font-mono); color:var(--text-primary);">Scan Output</h3>
+            <button class="btn btn-sm" onclick="closeQAModal()">Close</button>
+        </div>
+        <span id="qa-scan-status" class="badge badge-running">Running</span>
+        <img id="qa-image-preview" src="" alt="Preview">
+        <div id="qa-terminal" class="terminal" style="margin-top:12px;"></div>
+        <div id="qa-results" style="display:none; margin-top:12px;">
+            <table class="data-table">
+                <thead><tr><th>Type</th><th>Key</th><th>Value</th></tr></thead>
+                <tbody id="qa-results-body"></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -40,7 +138,7 @@
         </thead>
         <tbody id="recent-scans-body">
             <tr>
-                <td colspan="5" class="empty-state">No scans yet. Start a new scan from the recon modules.</td>
+                <td colspan="5" class="empty-state">No scans yet. Use the quick actions above or visit a recon module.</td>
             </tr>
         </tbody>
     </table>
@@ -48,7 +146,6 @@
 
 <script>
 async function initDashboard() {
-    // Load stats
     const statsResp = await fetch('/api/stats');
     if (statsResp.ok) {
         const stats = await statsResp.json();
@@ -57,7 +154,6 @@ async function initDashboard() {
         document.getElementById('stat-findings').textContent = stats.result_count || 0;
     }
 
-    // Load tool status
     const toolResp = await fetch('/api/tools/status');
     if (toolResp.ok) {
         const tools = await toolResp.json();
@@ -75,7 +171,6 @@ async function initDashboard() {
         }
     }
 
-    // Load recent scans
     const scansResp = await fetch('/api/scans/recent');
     if (scansResp.ok) {
         const scans = await scansResp.json();

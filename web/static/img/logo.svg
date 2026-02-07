@@ -1,10 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect x="2" y="4" width="28" height="20" rx="2" stroke="#58a6ff" stroke-width="2"/>
-  <line x1="2" y1="10" x2="30" y2="10" stroke="#30363d" stroke-width="1"/>
-  <circle cx="6" cy="7" r="1.2" fill="#f85149"/>
-  <circle cx="10" cy="7" r="1.2" fill="#d29922"/>
-  <circle cx="14" cy="7" r="1.2" fill="#3fb950"/>
-  <text x="6" y="19" font-family="monospace" font-size="6" fill="#58a6ff">&gt;_</text>
-  <text x="15" y="19" font-family="monospace" font-size="5" fill="#3fb950">scan</text>
-  <rect x="8" y="26" width="16" height="2" rx="1" fill="#30363d"/>
+  <path d="M6 4 L10 12 L6 12 Z" fill="#999" stroke="#e8e8e8" stroke-width="0.5"/>
+  <path d="M26 4 L22 12 L26 12 Z" fill="#999" stroke="#e8e8e8" stroke-width="0.5"/>
+  <ellipse cx="16" cy="18" rx="11" ry="10" fill="#1a1a1a" stroke="#e8e8e8" stroke-width="1.2"/>
+  <ellipse cx="11" cy="16" rx="4" ry="3" fill="#333"/>
+  <ellipse cx="21" cy="16" rx="4" ry="3" fill="#333"/>
+  <circle cx="11" cy="16" r="1.8" fill="#e8e8e8"/>
+  <circle cx="21" cy="16" r="1.8" fill="#e8e8e8"/>
+  <circle cx="11.5" cy="15.8" r="0.8" fill="#0a0a0a"/>
+  <circle cx="21.5" cy="15.8" r="0.8" fill="#0a0a0a"/>
+  <ellipse cx="16" cy="21" rx="2" ry="1.3" fill="#555"/>
+  <path d="M14.5 12 L16 10 L17.5 12 L16.5 21 L15.5 21 Z" fill="#888" opacity="0.5"/>
+  <path d="M14 23 Q16 25 18 23" stroke="#555" stroke-width="0.8" fill="none"/>
 </svg>

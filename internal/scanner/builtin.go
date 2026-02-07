@@ -32,6 +32,9 @@ func (e *Executor) runBuiltinScan(ctx context.Context, scan *database.Scan) {
 		results, err = checkSSL(scan.ID, scan.Target)
 	case "robots_sitemap":
 		results, err = fetchRobotsSitemap(ctx, scan.ID, scan.Target)
+	case "metadata_extract":
+		e.broadcastLines(scan.ID, "Extracting metadata from: "+scan.Target)
+		results, err = extractMetadata(ctx, scan.ID, scan.Target)
 	}
 
 	if err != nil {
@@ -287,4 +290,235 @@ func fetchRobotsSitemap(ctx context.Context, scanID int64, target string) ([]dat
 	}
 
 	return results, nil
+}
+
+// --- Metadata Extractor ---
+
+func extractMetadata(ctx context.Context, scanID int64, target string) ([]database.Result, error) {
+	if !strings.HasPrefix(target, "http") {
+		target = "https://" + target
+	}
+
+	client := &http.Client{
+		Timeout: 20 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return fmt.Errorf("too many redirects")
+			}
+			return nil
+		},
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", target, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("User-Agent", "RaccoonRecon/1.0 (Metadata Extractor)")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fetch URL: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var results []database.Result
+
+	// HTTP status
+	results = append(results, database.Result{
+		ScanID: scanID, ResultType: "metadata",
+		Key: "http_status", Value: resp.Status,
+	})
+
+	// Final URL after redirects
+	results = append(results, database.Result{
+		ScanID: scanID, ResultType: "metadata",
+		Key: "final_url", Value: resp.Request.URL.String(),
+	})
+
+	// Interesting response headers
+	interestingHeaders := []string{
+		"Server", "X-Powered-By", "Content-Type",
+		"X-Frame-Options", "X-Content-Type-Options",
+		"Strict-Transport-Security", "Content-Security-Policy",
+		"X-XSS-Protection", "Access-Control-Allow-Origin",
+		"Via", "X-Cache", "X-AspNet-Version", "X-Generator",
+	}
+
+	for _, hdr := range interestingHeaders {
+		if val := resp.Header.Get(hdr); val != "" {
+			results = append(results, database.Result{
+				ScanID: scanID, ResultType: "metadata",
+				Key: "header:" + strings.ToLower(hdr), Value: val,
+			})
+		}
+	}
+
+	// Read body (limit 2MB)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 2*1024*1024))
+	if err != nil {
+		return results, nil
+	}
+
+	htmlStr := string(body)
+
+	// Extract <title>
+	if title := extractHTMLTag(htmlStr, "title"); title != "" {
+		results = append(results, database.Result{
+			ScanID: scanID, ResultType: "metadata",
+			Key: "title", Value: title,
+		})
+	}
+
+	// Extract <meta> tags
+	metas := parseMetaTags(htmlStr)
+	for key, value := range metas {
+		results = append(results, database.Result{
+			ScanID: scanID, ResultType: "metadata",
+			Key: key, Value: value,
+		})
+	}
+
+	// Extract canonical URL
+	if canonical := extractLinkRel(htmlStr, "canonical"); canonical != "" {
+		results = append(results, database.Result{
+			ScanID: scanID, ResultType: "metadata",
+			Key: "canonical", Value: canonical,
+		})
+	}
+
+	// Extract favicon
+	if favicon := extractLinkRel(htmlStr, "icon"); favicon != "" {
+		results = append(results, database.Result{
+			ScanID: scanID, ResultType: "metadata",
+			Key: "favicon", Value: favicon,
+		})
+	} else if favicon := extractLinkRel(htmlStr, "shortcut icon"); favicon != "" {
+		results = append(results, database.Result{
+			ScanID: scanID, ResultType: "metadata",
+			Key: "favicon", Value: favicon,
+		})
+	}
+
+	return results, nil
+}
+
+// extractHTMLTag extracts text content between <tag> and </tag>.
+func extractHTMLTag(html, tag string) string {
+	lower := strings.ToLower(html)
+	openTag := "<" + tag
+	closeTag := "</" + tag + ">"
+	start := strings.Index(lower, openTag)
+	if start == -1 {
+		return ""
+	}
+	gtPos := strings.Index(lower[start:], ">")
+	if gtPos == -1 {
+		return ""
+	}
+	contentStart := start + gtPos + 1
+	end := strings.Index(lower[contentStart:], closeTag)
+	if end == -1 {
+		return ""
+	}
+	content := strings.TrimSpace(html[contentStart : contentStart+end])
+	if len(content) > 500 {
+		content = content[:500]
+	}
+	return content
+}
+
+// parseMetaTags extracts <meta name="..." content="..."> and <meta property="..." content="..."> tags.
+func parseMetaTags(html string) map[string]string {
+	results := make(map[string]string)
+	lower := strings.ToLower(html)
+	idx := 0
+
+	for {
+		pos := strings.Index(lower[idx:], "<meta")
+		if pos == -1 {
+			break
+		}
+		pos += idx
+		end := strings.Index(lower[pos:], ">")
+		if end == -1 {
+			break
+		}
+		tag := html[pos : pos+end+1]
+		tagLower := strings.ToLower(tag)
+
+		name := extractAttr(tagLower, "name")
+		if name == "" {
+			name = extractAttr(tagLower, "property")
+		}
+		content := extractAttr(tag, "content")
+
+		if name != "" && content != "" {
+			name = strings.ToLower(name)
+			if len(content) > 500 {
+				content = content[:500]
+			}
+			results[name] = content
+		}
+
+		idx = pos + end + 1
+	}
+
+	return results
+}
+
+// extractAttr extracts the value of an HTML attribute from a tag string.
+func extractAttr(tag, attr string) string {
+	searchDQ := attr + `="`
+	pos := strings.Index(strings.ToLower(tag), searchDQ)
+	if pos != -1 {
+		start := pos + len(searchDQ)
+		end := strings.Index(tag[start:], `"`)
+		if end != -1 {
+			return tag[start : start+end]
+		}
+	}
+
+	searchSQ := attr + `='`
+	pos = strings.Index(strings.ToLower(tag), searchSQ)
+	if pos != -1 {
+		start := pos + len(searchSQ)
+		end := strings.Index(tag[start:], `'`)
+		if end != -1 {
+			return tag[start : start+end]
+		}
+	}
+
+	return ""
+}
+
+// extractLinkRel extracts href from <link rel="relValue" href="...">.
+func extractLinkRel(html, relValue string) string {
+	lower := strings.ToLower(html)
+	idx := 0
+
+	for {
+		pos := strings.Index(lower[idx:], "<link")
+		if pos == -1 {
+			break
+		}
+		pos += idx
+		end := strings.Index(lower[pos:], ">")
+		if end == -1 {
+			break
+		}
+		tag := html[pos : pos+end+1]
+		tagLower := strings.ToLower(tag)
+
+		rel := extractAttr(tagLower, "rel")
+		if strings.Contains(strings.ToLower(rel), strings.ToLower(relValue)) {
+			href := extractAttr(tag, "href")
+			if href != "" {
+				return href
+			}
+		}
+
+		idx = pos + end + 1
+	}
+
+	return ""
 }

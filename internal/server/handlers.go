@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/jamesruggles/reconsuite/internal/database"
+	"github.com/jamesruggles/reconsuite/internal/scanner"
 	"github.com/jamesruggles/reconsuite/internal/tools"
 )
 
@@ -409,4 +410,44 @@ func (s *Server) handleAPIReport(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleAPIToolStatus(w http.ResponseWriter, r *http.Request) {
 	statuses := tools.DetectAll()
 	writeJSON(w, http.StatusOK, statuses)
+}
+
+// --- File Metadata Upload API ---
+
+func (s *Server) handleAPIFileMetadata(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10MB limit
+		writeError(w, http.StatusBadRequest, "file too large or invalid form data")
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "no file uploaded")
+		return
+	}
+	defer file.Close()
+
+	data := make([]byte, header.Size)
+	if _, err := file.Read(data); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to read file")
+		return
+	}
+
+	results, err := scanner.ExtractFileMetadata(header.Filename, data)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"filename":  header.Filename,
+		"size":      header.Size,
+		"mime_type": http.DetectContentType(data),
+		"results":   results,
+	})
 }
