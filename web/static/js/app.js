@@ -50,6 +50,7 @@ async function loadProjects() {
 
     list.innerHTML = projects.map(p => `
         <div class="card">
+            <div class="glow-card"></div>
             <h3>${esc(p.name)}</h3>
             <p style="color: var(--text-secondary); margin-bottom: 8px;">${esc(p.description || '')}</p>
             <p style="font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);">${esc(p.scope || 'No scope defined')}</p>
@@ -58,6 +59,7 @@ async function loadProjects() {
             </div>
         </div>
     `).join('');
+    initGlowCards();
 }
 
 async function deleteProject(id) {
@@ -487,9 +489,82 @@ function esc(text) {
     return div.innerHTML;
 }
 
+// --- Glowing card effect ---
+let _glowHandler = null;
+
+function initGlowCards() {
+    // Remove previous listener if re-initializing (e.g. after dynamic content load)
+    if (_glowHandler) {
+        document.body.removeEventListener('pointermove', _glowHandler);
+    }
+
+    const glowEls = document.querySelectorAll('.glow-card');
+    if (glowEls.length === 0) return;
+
+    let mouseX = 0, mouseY = 0;
+    let rafId = null;
+
+    function updateGlow() {
+        let closestGlow = null;
+        let closestDist = Infinity;
+
+        glowEls.forEach(glow => {
+            const card = glow.parentElement;
+            const rect = card.getBoundingClientRect();
+
+            const isInside = mouseX >= rect.left && mouseX <= rect.right &&
+                             mouseY >= rect.top && mouseY <= rect.bottom;
+
+            glow.style.setProperty('--glow-active', '0');
+            card.classList.remove('glow-active');
+
+            if (isInside) {
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                const dist = Math.hypot(mouseX - cx, mouseY - cy);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closestGlow = glow;
+                }
+            }
+        });
+
+        if (closestGlow) {
+            const card = closestGlow.parentElement;
+            const rect = card.getBoundingClientRect();
+
+            // Clamp cursor to card edge to get the nearest border point
+            const clampX = Math.max(rect.left, Math.min(mouseX, rect.right));
+            const clampY = Math.max(rect.top, Math.min(mouseY, rect.bottom));
+
+            // Angle from card center toward the clamped cursor position
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            const angle = Math.atan2(clampY - cy, clampX - cx) * (180 / Math.PI) + 90;
+
+            closestGlow.style.setProperty('--glow-active', '1');
+            closestGlow.style.setProperty('--glow-start', String(angle));
+            card.classList.add('glow-active');
+        }
+
+        rafId = null;
+    }
+
+    _glowHandler = (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        if (!rafId) {
+            rafId = requestAnimationFrame(updateGlow);
+        }
+    };
+
+    document.body.addEventListener('pointermove', _glowHandler, { passive: true });
+}
+
 // --- Init ---
 document.addEventListener('DOMContentLoaded', () => {
     loadProjects();
     loadProjectDropdown();
     loadDashboard();
+    initGlowCards();
 });

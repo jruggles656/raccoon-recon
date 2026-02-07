@@ -524,7 +524,7 @@ body {
 .dashboard-banner {
     font-family: var(--font-mono);
     font-size: 10px;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     line-height: 1.2;
     padding: 12px 16px;
     background: var(--bg-secondary);
@@ -533,6 +533,17 @@ body {
     margin-bottom: 16px;
     white-space: pre;
     overflow-x: auto;
+    min-height: 88px;
+}
+
+.dashboard-banner .cursor {
+    display: inline;
+    animation: blink 0.7s step-end infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
 }
 
 /* File drop zone */
@@ -573,6 +584,98 @@ body {
     border: 1px solid var(--border);
     margin: 12px 0;
     display: none;
+}
+
+/* Glowing card effect */
+.glow-card {
+    --glow-start: 0;
+    --glow-active: 0;
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    pointer-events: none;
+    background: conic-gradient(
+        from calc(var(--glow-start) * 1deg),
+        transparent 0deg,
+        #0d4a0d 25deg,
+        #22cc22 60deg,
+        #0d4a0d 95deg,
+        transparent 120deg
+    );
+    opacity: var(--glow-active);
+    transition: opacity 0.3s;
+    z-index: 0;
+}
+
+.glow-card::after {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    border-radius: inherit;
+    background: var(--bg-secondary);
+}
+
+.glow-active {
+    box-shadow: 0 0 25px rgba(34, 204, 34, 0.2), 0 0 50px rgba(34, 204, 34, 0.08);
+}
+
+.card, .quick-action-card {
+    position: relative;
+}
+
+.card > *:not(.glow-card), .quick-action-card > *:not(.glow-card) {
+    position: relative;
+    z-index: 1;
+}
+
+/* Retro Grid Background */
+.retro-grid {
+    pointer-events: none;
+    position: fixed;
+    top: -60%;
+    left: var(--sidebar-width);
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    opacity: 0.4;
+    perspective: 200px;
+    z-index: 0;
+}
+
+.retro-grid-plane {
+    position: absolute;
+    inset: 0;
+    transform: rotateX(65deg);
+}
+
+.retro-grid-lines {
+    animation: gridScroll 30s linear infinite;
+    background-image:
+        linear-gradient(to right, rgba(255,255,255,0.2) 1px, transparent 0),
+        linear-gradient(to bottom, rgba(255,255,255,0.2) 1px, transparent 0);
+    background-repeat: repeat;
+    background-size: 30px 30px;
+    height: 300vh;
+    inset: 0% 0px;
+    margin-left: -50%;
+    transform-origin: 100% 0 0;
+    width: 600vw;
+}
+
+.retro-grid-fade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, var(--bg-primary) 0%, transparent 90%);
+}
+
+@keyframes gridScroll {
+    0% { transform: translateY(-50%); }
+    100% { transform: translateY(0); }
+}
+
+.content {
+    position: relative;
+    z-index: 1;
 }
 
 /* Responsive */

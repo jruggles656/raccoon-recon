@@ -4,23 +4,22 @@
     <h2>Dashboard</h2>
 </div>
 
-<div class="dashboard-banner"> ____                                  ____
-|  _ \ __ _  ___ ___ ___   ___  _ __ |  _ \ ___  ___ ___  _ __
-| |_) / _` |/ __/ __/ _ \ / _ \| '_ \| |_) / _ \/ __/ _ \| '_ \
-|  _ &lt; (_| | (_| (_| (_) | (_) | | | |  _ &lt;  __/ (_| (_) | | | |
-|_| \_\__,_|\___\___\___/ \___/|_| |_|_| \_\___|\___\___/|_| |_|</div>
+<div class="dashboard-banner" id="banner-typewriter"><span class="cursor">█</span></div>
 
 <div class="card-grid">
     <div class="card">
+        <div class="glow-card"></div>
         <h3>Projects</h3>
         <p class="stat" id="stat-projects">0</p>
         <a href="/projects" class="btn btn-sm">View Projects</a>
     </div>
     <div class="card">
+        <div class="glow-card"></div>
         <h3>Total Scans</h3>
         <p class="stat" id="stat-scans">0</p>
     </div>
     <div class="card">
+        <div class="glow-card"></div>
         <h3>Findings</h3>
         <p class="stat" id="stat-findings">0</p>
     </div>
@@ -31,6 +30,7 @@
 <p class="section-header">Quick Actions</p>
 <div class="quick-actions-grid">
     <div class="quick-action-card">
+        <div class="glow-card"></div>
         <h4>WHOIS Lookup</h4>
         <p class="qa-desc">Query domain registration info</p>
         <div class="qa-form">
@@ -40,6 +40,7 @@
     </div>
 
     <div class="quick-action-card">
+        <div class="glow-card"></div>
         <h4>DNS Records</h4>
         <p class="qa-desc">Fetch DNS records via dig</p>
         <div class="qa-form">
@@ -49,6 +50,7 @@
     </div>
 
     <div class="quick-action-card">
+        <div class="glow-card"></div>
         <h4>Port Scan</h4>
         <p class="qa-desc">Quick TCP scan via nmap</p>
         <div class="qa-form">
@@ -58,6 +60,7 @@
     </div>
 
     <div class="quick-action-card">
+        <div class="glow-card"></div>
         <h4>SSL/TLS Check</h4>
         <p class="qa-desc">Analyze certificate and TLS config</p>
         <div class="qa-form">
@@ -67,6 +70,7 @@
     </div>
 
     <div class="quick-action-card">
+        <div class="glow-card"></div>
         <h4>Metadata Extractor</h4>
         <p class="qa-desc">Extract HTTP headers, meta tags, OG data</p>
         <div class="qa-form">
@@ -76,6 +80,7 @@
     </div>
 
     <div class="quick-action-card">
+        <div class="glow-card"></div>
         <h4>Google Dorking</h4>
         <p class="qa-desc">Generate targeted search queries</p>
         <div class="qa-form">
@@ -85,6 +90,7 @@
     </div>
 
     <div class="quick-action-card">
+        <div class="glow-card"></div>
         <h4>File Metadata</h4>
         <p class="qa-desc">Extract EXIF, PDF info, and hidden data from files</p>
         <div class="file-drop-zone" id="file-drop-zone"
@@ -118,6 +124,7 @@
 </div>
 
 <div class="card">
+    <div class="glow-card"></div>
     <h3>Tool Status</h3>
     <div id="tool-status-grid" class="tool-status-grid">
         <p class="empty-state">Loading tool status...</p>
@@ -125,6 +132,7 @@
 </div>
 
 <div class="card">
+    <div class="glow-card"></div>
     <h3>Recent Scans</h3>
     <table class="data-table">
         <thead>
@@ -188,5 +196,43 @@ async function initDashboard() {
 }
 
 initDashboard();
+
+// Typewriter effect for ASCII banner
+(function() {
+    const banner = document.getElementById('banner-typewriter');
+    if (!banner) return;
+
+    const lines = [
+        ' ____                                  ____',
+        '|  _ \\ __ _  ___ ___ ___   ___  _ __ |  _ \\ ___  ___ ___  _ __',
+        '| |_) / _` |/ __/ __/ _ \\ / _ \\| \'_ \\| |_) / _ \\/ __/ _ \\| \'_ \\',
+        '|  _ < (_| | (_| (_| (_) | (_) | | | |  _ <  __/ (_| (_) | | | |',
+        '|_| \\_\\__,_|\\___\\___\\___/ \\___/|_| |_|_| \\_\\___|\\___\\___/|_| |_|'
+    ];
+    const fullText = lines.join('\n');
+    let i = 0;
+
+    banner.textContent = '';
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    cursor.textContent = '█';
+    banner.appendChild(cursor);
+
+    function type() {
+        if (i < fullText.length) {
+            // Insert text before the cursor
+            cursor.before(fullText[i]);
+            i++;
+            // Vary speed: newlines get a small pause, regular chars are fast
+            const delay = fullText[i - 1] === '\n' ? 80 : 12;
+            setTimeout(type, delay);
+        } else {
+            // Remove cursor after typing is done
+            setTimeout(() => cursor.remove(), 1500);
+        }
+    }
+
+    type();
+})();
 </script>
 {{end}}

@@ -5,6 +5,7 @@
 </div>
 
 <div class="card">
+    <div class="glow-card"></div>
     <h3>Run Active Scan</h3>
     <form id="active-form" onsubmit="runScan(event, 'active')">
         <div class="form-row">
@@ -36,11 +37,13 @@
 </div>
 
 <div id="scan-output" class="card" style="display:none;">
+    <div class="glow-card"></div>
     <h3>Live Output <span id="scan-status" class="badge badge-running">Running</span></h3>
     <div id="terminal" class="terminal"></div>
 </div>
 
 <div id="scan-results" class="card" style="display:none;">
+    <div class="glow-card"></div>
     <h3>Results</h3>
     <table class="data-table">
         <thead>

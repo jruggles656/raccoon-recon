@@ -23,6 +23,12 @@
             <li><a href="/reports" class="nav-link{{if eq .ActivePage "reports"}} active{{end}}">Reports</a></li>
         </ul>
     </nav>
+    <div class="retro-grid">
+        <div class="retro-grid-plane">
+            <div class="retro-grid-lines"></div>
+        </div>
+        <div class="retro-grid-fade"></div>
+    </div>
     <main class="content">
         {{template "content" .}}
     </main>
