@@ -15,13 +15,14 @@ import (
 )
 
 type Server struct {
-	cfg       *config.Config
-	db        *database.DB
-	hub       *Hub
-	executor  *scanner.Executor
-	reportGen *report.Generator
-	mux       *http.ServeMux
-	pages     map[string]*template.Template
+	cfg         *config.Config
+	db          *database.DB
+	hub         *Hub
+	executor    *scanner.Executor
+	reportGen   *report.Generator
+	mux         *http.ServeMux
+	pages       map[string]*template.Template
+	welcomeTmpl *template.Template
 }
 
 func New(cfg *config.Config, db *database.DB) (*Server, error) {
@@ -64,6 +65,13 @@ func (s *Server) loadTemplates() error {
 		s.pages[page] = tmpl
 	}
 
+	// Welcome page is standalone (no layout)
+	welcomeTmpl, err := template.ParseFS(web.Templates, "templates/welcome.html")
+	if err != nil {
+		return fmt.Errorf("parsing welcome.html: %w", err)
+	}
+	s.welcomeTmpl = welcomeTmpl
+
 	return nil
 }
 
@@ -71,13 +79,17 @@ func (s *Server) ListenAndServe() error {
 	addr := fmt.Sprintf("%s:%d", s.cfg.Server.Host, s.cfg.Server.Port)
 	slog.Info("starting server", "addr", addr)
 
-	handler := recoveryMiddleware(securityHeaders(loggingMiddleware(s.mux)))
+	handler := recoveryMiddleware(securityHeaders(loggingMiddleware(disclaimerMiddleware(s.mux))))
 	return http.ListenAndServe(addr, handler)
 }
 
 func (s *Server) registerRoutes() {
 	staticFS, _ := fs.Sub(web.Static, "static")
 	s.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+
+	// Welcome / Disclaimer
+	s.mux.HandleFunc("/welcome", s.handleWelcome)
+	s.mux.HandleFunc("/welcome/accept", s.handleWelcomeAccept)
 
 	// Pages
 	s.mux.HandleFunc("/", s.handleDashboard)

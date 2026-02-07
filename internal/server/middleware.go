@@ -3,6 +3,7 @@ package server
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -37,6 +38,27 @@ func recoveryMiddleware(next http.Handler) http.Handler {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			}
 		}()
+		next.ServeHTTP(w, r)
+	})
+}
+
+func disclaimerMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Allow static assets, the welcome page, and the accept endpoint through
+		path := r.URL.Path
+		if strings.HasPrefix(path, "/static/") ||
+			strings.HasPrefix(path, "/welcome") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Check for the disclaimer cookie
+		cookie, err := r.Cookie("disclaimer_accepted")
+		if err != nil || cookie.Value != "true" {
+			http.Redirect(w, r, "/welcome", http.StatusSeeOther)
+			return
+		}
+
 		next.ServeHTTP(w, r)
 	})
 }

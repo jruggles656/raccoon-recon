@@ -50,21 +50,28 @@ async function initReportsPage() {
     const resp = await fetch('/api/projects');
     if (!resp.ok) return;
     const projects = await resp.json();
-    sel.innerHTML = '';
+    sel.innerHTML = '<option value="all">All Projects</option>';
     if (projects && projects.length > 0) {
         projects.forEach(p => {
             sel.innerHTML += `<option value="${p.id}">${esc(p.name)}</option>`;
         });
-        loadReports(projects[0].id);
-        sel.onchange = () => loadReports(sel.value);
     }
+    loadReports('all');
+    sel.onchange = () => loadReports(sel.value);
 }
 
 async function generateReport() {
-    const projectId = parseInt(document.getElementById('report-project').value);
+    const sel = document.getElementById('report-project');
+    const projectVal = sel.value;
     const format = document.getElementById('report-format').value;
     const statusEl = document.getElementById('report-status');
 
+    if (projectVal === 'all') {
+        statusEl.innerHTML = '<span style="color: var(--warning);">Select a specific project to generate a report.</span>';
+        return;
+    }
+
+    const projectId = parseInt(projectVal);
     if (!projectId) {
         statusEl.innerHTML = '<span style="color: var(--danger);">Select a project first.</span>';
         return;
@@ -86,7 +93,7 @@ async function generateReport() {
 
     const rpt = await resp.json();
     statusEl.innerHTML = `<span style="color: var(--success);">Report generated: ${esc(rpt.title)}</span>`;
-    loadReports(projectId);
+    loadReports(projectVal);
 }
 
 async function loadReports(projectId) {
@@ -97,7 +104,8 @@ async function loadReports(projectId) {
     const tbody = document.getElementById('reports-body');
 
     if (!reports || reports.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No reports for this project.</td></tr>';
+        const msg = projectId === 'all' ? 'No reports yet.' : 'No reports for this project.';
+        tbody.innerHTML = `<tr><td colspan="4" class="empty-state">${msg}</td></tr>`;
         return;
     }
 

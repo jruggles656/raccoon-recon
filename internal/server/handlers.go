@@ -28,6 +28,33 @@ func (s *Server) renderPage(w http.ResponseWriter, page string, data pageData) {
 	}
 }
 
+func (s *Server) handleWelcome(w http.ResponseWriter, r *http.Request) {
+	// If already accepted, redirect to dashboard
+	if cookie, err := r.Cookie("disclaimer_accepted"); err == nil && cookie.Value == "true" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	if err := s.welcomeTmpl.Execute(w, nil); err != nil {
+		slog.Error("template render error", "page", "welcome", "error", err)
+		http.Error(w, "render error", http.StatusInternalServerError)
+	}
+}
+
+func (s *Server) handleWelcomeAccept(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "disclaimer_accepted",
+		Value:    "true",
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
@@ -348,15 +375,24 @@ func (s *Server) handleAPIReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Handle /api/reports/by-project/{id}
+	// Handle /api/reports/by-project/{id} or /api/reports/by-project/all
 	if strings.HasPrefix(idStr, "by-project/") {
 		projIDStr := strings.TrimPrefix(idStr, "by-project/")
-		projID, err := strconv.ParseInt(projIDStr, 10, 64)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "invalid project id")
-			return
+
+		var reports []database.Report
+		var err error
+
+		if projIDStr == "all" {
+			reports, err = s.db.ListAllReports()
+		} else {
+			projID, parseErr := strconv.ParseInt(projIDStr, 10, 64)
+			if parseErr != nil {
+				writeError(w, http.StatusBadRequest, "invalid project id")
+				return
+			}
+			reports, err = s.db.ListReportsByProject(projID)
 		}
-		reports, err := s.db.ListReportsByProject(projID)
+
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return

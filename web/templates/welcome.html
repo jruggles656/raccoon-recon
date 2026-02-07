@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raccoon Recon — Welcome</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>.retro-grid { left: 0; } body { display: block; }</style>
+</head>
+<body>
+    <div class="retro-grid">
+        <div class="retro-grid-plane">
+            <div class="retro-grid-lines"></div>
+        </div>
+        <div class="retro-grid-fade"></div>
+    </div>
+
+    <div class="welcome-container">
+        <div class="welcome-logo">
+            <img src="/static/img/logo.svg" alt="" width="48" height="48">
+        </div>
+
+        <div class="welcome-banner" id="welcome-typewriter"><span class="cursor">&#9608;</span></div>
+
+        <div class="welcome-card">
+            <div class="glow-card"></div>
+            <h2 class="welcome-title">Authorized Use Only</h2>
+            <div class="welcome-disclaimer">
+                <p>This tool is designed for <strong>authorized security testing and educational purposes only</strong>. By proceeding, you acknowledge and agree to the following:</p>
+                <ul>
+                    <li>You have <strong>explicit written authorization</strong> to perform reconnaissance on all targets you scan.</li>
+                    <li>Unauthorized scanning of networks, systems, or domains you do not own or have permission to test is <strong>illegal</strong> and may violate federal and state laws including the Computer Fraud and Abuse Act (CFAA).</li>
+                    <li>You accept <strong>full responsibility</strong> for any actions taken using this tool.</li>
+                    <li>This tool is provided <strong>as-is</strong> for educational use in IST-4620 Penetration Testing &amp; Ethical Hacking.</li>
+                </ul>
+            </div>
+
+            <form method="POST" action="/welcome/accept" id="welcome-form">
+                <label class="welcome-checkbox">
+                    <input type="checkbox" id="agree-checkbox" required>
+                    <span>I understand and agree to use this tool only on systems I am authorized to test.</span>
+                </label>
+                <button type="submit" class="btn btn-primary welcome-enter" id="enter-btn" disabled>
+                    Enter Raccoon Recon
+                </button>
+            </form>
+        </div>
+
+        <p class="welcome-footer">IST-4620 Penetration Testing &amp; Ethical Hacking &mdash; Spring 2026</p>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+    // Enable button when checkbox is checked
+    document.getElementById('agree-checkbox').addEventListener('change', function() {
+        document.getElementById('enter-btn').disabled = !this.checked;
+    });
+
+    // Typewriter effect
+    (function() {
+        const banner = document.getElementById('welcome-typewriter');
+        if (!banner) return;
+
+        const lines = [
+            ' ____                                  ____',
+            '|  _ \\ __ _  ___ ___ ___   ___  _ __ |  _ \\ ___  ___ ___  _ __',
+            '| |_) / _` |/ __/ __/ _ \\ / _ \\| \'_ \\| |_) / _ \\/ __/ _ \\| \'_ \\',
+            '|  _ < (_| | (_| (_| (_) | (_) | | | |  _ <  __/ (_| (_) | | | |',
+            '|_| \\_\\__,_|\\___\\___\\___/ \\___/|_| |_|_| \\_\\___|\\___\\___/|_| |_|'
+        ];
+        const fullText = lines.join('\n');
+        let i = 0;
+
+        banner.textContent = '';
+        const cursor = document.createElement('span');
+        cursor.className = 'cursor';
+        cursor.textContent = '\u2588';
+        banner.appendChild(cursor);
+
+        function type() {
+            if (i < fullText.length) {
+                cursor.before(fullText[i]);
+                i++;
+                const delay = fullText[i - 1] === '\n' ? 80 : 12;
+                setTimeout(type, delay);
+            } else {
+                setTimeout(() => cursor.remove(), 1500);
+            }
+        }
+
+        type();
+    })();
+    </script>
+</body>
+</html>

@@ -280,6 +280,27 @@ func (db *DB) ListReportsByProject(projectID int64) ([]Report, error) {
 	return reports, rows.Err()
 }
 
+func (db *DB) ListAllReports() ([]Report, error) {
+	rows, err := db.Query(
+		`SELECT id, project_id, title, format, file_path, created_at
+		 FROM reports ORDER BY created_at DESC`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list all reports: %w", err)
+	}
+	defer rows.Close()
+
+	var reports []Report
+	for rows.Next() {
+		var r Report
+		if err := rows.Scan(&r.ID, &r.ProjectID, &r.Title, &r.Format, &r.FilePath, &r.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan report: %w", err)
+		}
+		reports = append(reports, r)
+	}
+	return reports, rows.Err()
+}
+
 // --- Stats ---
 
 type DashboardStats struct {
