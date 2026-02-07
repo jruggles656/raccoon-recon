@@ -16,6 +16,10 @@
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat" alt="License">
 </p>
 
+<p align="center">
+  <img src="docs/welcome.png" alt="Raccoon Recon Screenshot" width="800">
+</p>
+
 ---
 
 Raccoon Recon provides a sleek, dark-themed dashboard for conducting passive, active, and web reconnaissance during the information-gathering phase of a penetration test. All scan results are persisted in SQLite and can be exported as PDF or Markdown reports.
@@ -173,7 +177,7 @@ raccoon-recon/
 ├── web/
 │   ├── embed.go                   # Go embed directives
 │   ├── templates/                 # HTML templates (embedded)
-│   │   ├── layout.html            # Base layout with sidebar
+│   │   ├── layout.html            # Base layout with top navbar
 │   │   ├── dashboard.html         # Dashboard with quick actions
 │   │   ├── passive.html           # Passive recon page
 │   │   ├── active.html            # Active recon page
