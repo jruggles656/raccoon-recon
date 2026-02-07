@@ -1,0 +1,8 @@
+reconsuite
+reconsuite.db
+reconsuite.db-shm
+reconsuite.db-wal
+reports/*.md
+reports/*.pdf
+*.log
+.DS_Store

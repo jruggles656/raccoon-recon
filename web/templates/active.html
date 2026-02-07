@@ -1,0 +1,70 @@
+{{define "title"}}Active Recon{{end}}
+{{define "content"}}
+<div class="page-header">
+    <h2>Active Reconnaissance</h2>
+</div>
+
+<div class="card">
+    <h3>Run Active Scan</h3>
+    <form id="active-form" onsubmit="runScan(event, 'active')">
+        <div class="form-row">
+            <div class="form-group" style="flex:2">
+                <label for="target">Target (IP, CIDR, or hostname)</label>
+                <input type="text" id="target" required placeholder="192.168.1.1 or 10.0.0.0/24">
+            </div>
+            <div class="form-group" style="flex:1">
+                <label for="tool">Tool</label>
+                <select id="tool" onchange="updateToolOptions('active')">
+                    <option value="nmap">Nmap Port Scan</option>
+                    <option value="nmap" data-scan-type="service">Nmap Service Detection</option>
+                    <option value="nmap" data-scan-type="os">Nmap OS Fingerprint</option>
+                    <option value="nmap" data-scan-type="ping">Nmap Ping Sweep</option>
+                    <option value="nmap" data-scan-type="banner">Nmap Banner Grab</option>
+                    <option value="traceroute">Traceroute</option>
+                    <option value="snmpwalk">SNMP Walk</option>
+                    <option value="netcat">Banner Grab (nc)</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex:1">
+                <label for="project_id">Project</label>
+                <select id="project_id"></select>
+            </div>
+        </div>
+        <div id="tool-options"></div>
+        <button type="submit" class="btn btn-primary">Run Scan</button>
+    </form>
+</div>
+
+<div id="scan-output" class="card" style="display:none;">
+    <h3>Live Output <span id="scan-status" class="badge badge-running">Running</span></h3>
+    <div id="terminal" class="terminal"></div>
+</div>
+
+<div id="scan-results" class="card" style="display:none;">
+    <h3>Results</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Key</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+    </table>
+</div>
+
+<script>
+const toolOptionsConfig = {
+    nmap: `<div class="form-group"><label for="ports">Ports (optional)</label>
+        <input type="text" id="ports" placeholder="1-1000 or 22,80,443"></div>`,
+    snmpwalk: `<div class="form-row">
+        <div class="form-group" style="flex:1"><label for="community">Community String</label>
+        <input type="text" id="community" value="public"></div>
+        <div class="form-group" style="flex:1"><label for="oid">OID</label>
+        <input type="text" id="oid" value="1.3.6.1.2.1" placeholder="1.3.6.1.2.1"></div></div>`,
+    netcat: `<div class="form-group"><label for="port">Port</label>
+        <input type="text" id="port" required placeholder="80"></div>`
+};
+</script>
+{{end}}

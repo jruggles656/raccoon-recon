@@ -1,0 +1,27 @@
+server:
+  host: "127.0.0.1"
+  port: 8080
+
+database:
+  path: "reconsuite.db"
+
+reports:
+  directory: "./reports"
+
+# Scan defaults
+scans:
+  timeout: 300  # seconds, per-scan timeout
+  max_concurrent: 3
+
+# Default tool flags (override via UI)
+tools:
+  nmap:
+    default_ports: "1-1000"
+  gobuster:
+    default_wordlist: "/usr/share/wordlists/dirb/common.txt"
+  whatweb:
+    default_aggression: 1
+  theharvester:
+    default_source: "all"
+  snmpwalk:
+    default_community: "public"

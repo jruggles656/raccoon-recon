@@ -1,0 +1,68 @@
+{{define "title"}}Passive Recon{{end}}
+{{define "content"}}
+<div class="page-header">
+    <h2>Passive Reconnaissance</h2>
+</div>
+
+<div class="card">
+    <h3>Run Passive Scan</h3>
+    <form id="passive-form" onsubmit="runScan(event, 'passive')">
+        <div class="form-row">
+            <div class="form-group" style="flex:2">
+                <label for="target">Target (domain or IP)</label>
+                <input type="text" id="target" required placeholder="example.com">
+            </div>
+            <div class="form-group" style="flex:1">
+                <label for="tool">Tool</label>
+                <select id="tool" onchange="updateToolOptions('passive')">
+                    <option value="whois">WHOIS Lookup</option>
+                    <option value="dig">DNS Records (dig)</option>
+                    <option value="theharvester">Subdomain Enum (theHarvester)</option>
+                    <option value="dnsrecon">DNS Recon</option>
+                    <option value="google_dorking">Google Dorking</option>
+                    <option value="osint_aggregator">OSINT Links</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex:1">
+                <label for="project_id">Project</label>
+                <select id="project_id"></select>
+            </div>
+        </div>
+        <div id="tool-options"></div>
+        <button type="submit" class="btn btn-primary">Run Scan</button>
+    </form>
+</div>
+
+<div id="scan-output" class="card" style="display:none;">
+    <h3>Live Output <span id="scan-status" class="badge badge-running">Running</span></h3>
+    <div id="terminal" class="terminal"></div>
+</div>
+
+<div id="scan-results" class="card" style="display:none;">
+    <h3>Results</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Key</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+    </table>
+</div>
+
+<script>
+const toolOptionsConfig = {
+    dig: `<div class="form-group"><label for="record_type">Record Type</label>
+        <select id="record_type"><option value="A">A</option><option value="AAAA">AAAA</option>
+        <option value="MX">MX</option><option value="NS">NS</option><option value="TXT">TXT</option>
+        <option value="SOA">SOA</option><option value="CNAME">CNAME</option><option value="ANY">ANY</option></select></div>`,
+    theharvester: `<div class="form-group"><label for="sources">Sources</label>
+        <input type="text" id="sources" value="bing,crtsh,dnsdumpster" placeholder="bing,crtsh,dnsdumpster"></div>`,
+    dnsrecon: `<div class="form-group"><label for="scan_mode">Mode</label>
+        <select id="scan_mode"><option value="standard">Standard</option><option value="reverse">Reverse DNS</option>
+        <option value="axfr">Zone Transfer (AXFR)</option></select></div>`
+};
+</script>
+{{end}}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <rect x="2" y="4" width="28" height="20" rx="2" stroke="#58a6ff" stroke-width="2"/>
+  <line x1="2" y1="10" x2="30" y2="10" stroke="#30363d" stroke-width="1"/>
+  <circle cx="6" cy="7" r="1.2" fill="#f85149"/>
+  <circle cx="10" cy="7" r="1.2" fill="#d29922"/>
+  <circle cx="14" cy="7" r="1.2" fill="#3fb950"/>
+  <text x="6" y="19" font-family="monospace" font-size="6" fill="#58a6ff">&gt;_</text>
+  <text x="15" y="19" font-family="monospace" font-size="5" fill="#3fb950">scan</text>
+  <rect x="8" y="26" width="16" height="2" rx="1" fill="#30363d"/>
+</svg>

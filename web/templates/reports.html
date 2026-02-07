@@ -1,0 +1,112 @@
+{{define "title"}}Reports{{end}}
+{{define "content"}}
+<div class="page-header">
+    <h2>Reports</h2>
+</div>
+
+<div class="card">
+    <h3>Generate Report</h3>
+    <div class="form-row">
+        <div class="form-group" style="flex:2; margin-bottom:0;">
+            <label for="report-project">Project</label>
+            <select id="report-project"></select>
+        </div>
+        <div class="form-group" style="flex:1; margin-bottom:0;">
+            <label for="report-format">Format</label>
+            <select id="report-format">
+                <option value="markdown">Markdown</option>
+                <option value="pdf">PDF</option>
+            </select>
+        </div>
+        <div class="form-group" style="flex:1; margin-bottom:0; align-self:flex-end;">
+            <button class="btn btn-primary" onclick="generateReport()">Generate</button>
+        </div>
+    </div>
+    <div id="report-status" style="margin-top: 8px;"></div>
+</div>
+
+<div class="card">
+    <h3>Generated Reports</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Format</th>
+                <th>Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="reports-body">
+            <tr><td colspan="4" class="empty-state">No reports yet.</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+async function initReportsPage() {
+    const sel = document.getElementById('report-project');
+    const resp = await fetch('/api/projects');
+    if (!resp.ok) return;
+    const projects = await resp.json();
+    sel.innerHTML = '';
+    if (projects && projects.length > 0) {
+        projects.forEach(p => {
+            sel.innerHTML += `<option value="${p.id}">${esc(p.name)}</option>`;
+        });
+        loadReports(projects[0].id);
+        sel.onchange = () => loadReports(sel.value);
+    }
+}
+
+async function generateReport() {
+    const projectId = parseInt(document.getElementById('report-project').value);
+    const format = document.getElementById('report-format').value;
+    const statusEl = document.getElementById('report-status');
+
+    if (!projectId) {
+        statusEl.innerHTML = '<span style="color: var(--danger);">Select a project first.</span>';
+        return;
+    }
+
+    statusEl.innerHTML = '<span style="color: var(--warning);">Generating report...</span>';
+
+    const resp = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: projectId, format }),
+    });
+
+    if (!resp.ok) {
+        const err = await resp.json();
+        statusEl.innerHTML = `<span style="color: var(--danger);">Error: ${esc(err.error)}</span>`;
+        return;
+    }
+
+    const rpt = await resp.json();
+    statusEl.innerHTML = `<span style="color: var(--success);">Report generated: ${esc(rpt.title)}</span>`;
+    loadReports(projectId);
+}
+
+async function loadReports(projectId) {
+    const resp = await fetch(`/api/reports/by-project/${projectId}`);
+    if (!resp.ok) return;
+
+    const reports = await resp.json();
+    const tbody = document.getElementById('reports-body');
+
+    if (!reports || reports.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No reports for this project.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = reports.map(r => `<tr>
+        <td>${esc(r.title)}</td>
+        <td><span class="badge badge-completed">${esc(r.format)}</span></td>
+        <td>${new Date(r.created_at).toLocaleString()}</td>
+        <td><a href="/api/reports/${r.id}/download" class="btn btn-sm" target="_blank">Download</a></td>
+    </tr>`).join('');
+}
+
+initReportsPage();
+</script>
+{{end}}

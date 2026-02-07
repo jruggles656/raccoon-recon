@@ -1,0 +1,66 @@
+{{define "title"}}Web Recon{{end}}
+{{define "content"}}
+<div class="page-header">
+    <h2>Web Reconnaissance</h2>
+</div>
+
+<div class="card">
+    <h3>Run Web Scan</h3>
+    <form id="web-form" onsubmit="runScan(event, 'web')">
+        <div class="form-row">
+            <div class="form-group" style="flex:2">
+                <label for="target">Target URL</label>
+                <input type="text" id="target" required placeholder="https://example.com">
+            </div>
+            <div class="form-group" style="flex:1">
+                <label for="tool">Tool</label>
+                <select id="tool" onchange="updateToolOptions('web')">
+                    <option value="curl">HTTP Headers (curl)</option>
+                    <option value="whatweb">Technology Detection (WhatWeb)</option>
+                    <option value="gobuster">Directory Discovery (Gobuster)</option>
+                    <option value="ssl_check">SSL/TLS Analysis</option>
+                    <option value="robots_sitemap">Robots.txt / Sitemap</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex:1">
+                <label for="project_id">Project</label>
+                <select id="project_id"></select>
+            </div>
+        </div>
+        <div id="tool-options"></div>
+        <button type="submit" class="btn btn-primary">Run Scan</button>
+    </form>
+</div>
+
+<div id="scan-output" class="card" style="display:none;">
+    <h3>Live Output <span id="scan-status" class="badge badge-running">Running</span></h3>
+    <div id="terminal" class="terminal"></div>
+</div>
+
+<div id="scan-results" class="card" style="display:none;">
+    <h3>Results</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Key</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+    </table>
+</div>
+
+<script>
+const toolOptionsConfig = {
+    whatweb: `<div class="form-group"><label for="aggression">Aggression Level</label>
+        <select id="aggression"><option value="1">1 - Stealthy</option>
+        <option value="3">3 - Aggressive</option></select></div>`,
+    gobuster: `<div class="form-row">
+        <div class="form-group" style="flex:2"><label for="wordlist">Wordlist Path</label>
+        <input type="text" id="wordlist" value="/usr/share/wordlists/dirb/common.txt"></div>
+        <div class="form-group" style="flex:1"><label for="extensions">Extensions</label>
+        <input type="text" id="extensions" placeholder="php,html,txt"></div></div>`
+};
+</script>
+{{end}}

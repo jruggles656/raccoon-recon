@@ -1,0 +1,97 @@
+{{define "title"}}Dashboard{{end}}
+{{define "content"}}
+<div class="page-header">
+    <h2>Dashboard</h2>
+</div>
+<div class="card-grid">
+    <div class="card">
+        <h3>Projects</h3>
+        <p class="stat" id="stat-projects">0</p>
+        <a href="/projects" class="btn btn-sm">View Projects</a>
+    </div>
+    <div class="card">
+        <h3>Total Scans</h3>
+        <p class="stat" id="stat-scans">0</p>
+    </div>
+    <div class="card">
+        <h3>Findings</h3>
+        <p class="stat" id="stat-findings">0</p>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Tool Status</h3>
+    <div id="tool-status-grid" class="tool-status-grid">
+        <p class="empty-state">Loading tool status...</p>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Recent Scans</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Target</th>
+                <th>Tool</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody id="recent-scans-body">
+            <tr>
+                <td colspan="5" class="empty-state">No scans yet. Start a new scan from the recon modules.</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+async function initDashboard() {
+    // Load stats
+    const statsResp = await fetch('/api/stats');
+    if (statsResp.ok) {
+        const stats = await statsResp.json();
+        document.getElementById('stat-projects').textContent = stats.project_count || 0;
+        document.getElementById('stat-scans').textContent = stats.scan_count || 0;
+        document.getElementById('stat-findings').textContent = stats.result_count || 0;
+    }
+
+    // Load tool status
+    const toolResp = await fetch('/api/tools/status');
+    if (toolResp.ok) {
+        const tools = await toolResp.json();
+        const grid = document.getElementById('tool-status-grid');
+        if (tools && tools.length > 0) {
+            grid.innerHTML = tools.map(t => `
+                <div class="tool-status-item ${t.installed ? 'installed' : 'missing'}">
+                    <span class="tool-indicator"></span>
+                    <span class="tool-name">${esc(t.name)}</span>
+                    <span class="tool-version">${t.installed ? esc(t.version || 'found') : 'not found'}</span>
+                </div>
+            `).join('');
+        } else {
+            grid.innerHTML = '<p class="empty-state">No tools configured.</p>';
+        }
+    }
+
+    // Load recent scans
+    const scansResp = await fetch('/api/scans/recent');
+    if (scansResp.ok) {
+        const scans = await scansResp.json();
+        const tbody = document.getElementById('recent-scans-body');
+        if (scans && scans.length > 0) {
+            tbody.innerHTML = scans.map(s => `<tr>
+                <td style="font-family: var(--font-mono);">${esc(s.target)}</td>
+                <td>${esc(s.tool)}</td>
+                <td>${esc(s.scan_type)}</td>
+                <td><span class="badge badge-${s.status}">${esc(s.status)}</span></td>
+                <td>${new Date(s.started_at).toLocaleString()}</td>
+            </tr>`).join('');
+        }
+    }
+}
+
+initDashboard();
+</script>
+{{end}}
