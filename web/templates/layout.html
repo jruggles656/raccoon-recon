@@ -7,18 +7,17 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <nav class="sidebar">
-        <div class="sidebar-header">
-            <h1 class="logo"><img src="/static/img/logo.svg" alt="" width="24" height="24" style="vertical-align: middle; margin-right: 8px;">Raccoon Recon</h1>
-        </div>
-        <ul class="nav-links">
+    <nav class="topnav">
+        <a href="/" class="topnav-logo">
+            <img src="/static/img/logo.svg" alt="" width="24" height="24">
+            <span>Raccoon Recon</span>
+        </a>
+        <ul class="topnav-links">
             <li><a href="/" class="nav-link{{if eq .ActivePage "dashboard"}} active{{end}}">Dashboard</a></li>
             <li><a href="/projects" class="nav-link{{if eq .ActivePage "projects"}} active{{end}}">Projects</a></li>
-            <li class="nav-section">Reconnaissance</li>
-            <li><a href="/passive" class="nav-link{{if eq .ActivePage "passive"}} active{{end}}">Passive Recon</a></li>
-            <li><a href="/active" class="nav-link{{if eq .ActivePage "active"}} active{{end}}">Active Recon</a></li>
-            <li><a href="/web" class="nav-link{{if eq .ActivePage "web"}} active{{end}}">Web Recon</a></li>
-            <li class="nav-section">Output</li>
+            <li><a href="/passive" class="nav-link{{if eq .ActivePage "passive"}} active{{end}}">Passive</a></li>
+            <li><a href="/active" class="nav-link{{if eq .ActivePage "active"}} active{{end}}">Active</a></li>
+            <li><a href="/web" class="nav-link{{if eq .ActivePage "web"}} active{{end}}">Web</a></li>
             <li><a href="/results" class="nav-link{{if eq .ActivePage "results"}} active{{end}}">Results</a></li>
             <li><a href="/reports" class="nav-link{{if eq .ActivePage "reports"}} active{{end}}">Reports</a></li>
         </ul>
