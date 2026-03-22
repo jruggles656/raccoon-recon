@@ -231,12 +231,6 @@ raccoon-recon/
 
 ---
 
-## 📄 License
-
-MIT
-
----
-
 <p align="center">
   <strong>🦝 Happy Recon!</strong><br>
   <sub>Built with ☕ and Go</sub>
