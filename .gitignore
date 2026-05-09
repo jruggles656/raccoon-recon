@@ -6,3 +6,13 @@ reports/*.md
 reports/*.pdf
 *.log
 .DS_Store
+
+# Security — never commit these
+.env
+.env.*
+*.pem
+*.key
+*.p12
+.gh-token
+credentials.json
+secrets/
